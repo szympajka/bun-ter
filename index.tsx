@@ -1,25 +1,30 @@
 import { renderToReadableStream } from 'react-dom/server';
-import { App } from './main';
+import { AppServer } from './main';
 import { Server } from 'bun';
+import { write } from 'console';
 
 const buildsMatchers = new Map<string, () => Response>();
 
+const excludeFromAutoMount = [
+  '/reactMain.js',
+];
+
 const init = async () => {
   const builds = await Bun.build({
-    entrypoints: ['./dynamicBuild/b.ts'],
+    entrypoints: ['./dynamicBuild/b.tsx', './dynamicBuild/reactMain.tsx'],
     target: "browser",
     splitting: true,
     minify: {
       identifiers: true,
       syntax: true,
       whitespace: true,
-    }
+    },
   });
 
   for (const build of builds.outputs) {
     buildsMatchers.set(build.path.substring(1), () => new Response(build.stream(), {
       headers: {
-        "Content-Type": "application/javascript",
+        "Content-Type": "text/javascript",
       },
     }));
   }
@@ -53,7 +58,7 @@ const serveFavicon = (req: Request) => {
   }
 }
 
-const serveDemoPage = async (req: Request) => {
+const serveDemoPage = async (req: Request, bunServer: Server) => {
   const { pathname } = new URL(req.url);
 
   if (pathname === "/demo" && req.method === "GET") {
@@ -70,12 +75,17 @@ const serveDemoPage = async (req: Request) => {
         console.log("Stream complete");
 
         writer.close();
+
+        bunServer.publish("bridge", "Stream complete");
       };
     };
 
     const renderReact = async (request: Request) => {
-      const AppComponent = await App();
-      const stream = await renderToReadableStream(AppComponent);
+      const AppComponent = await AppServer();
+      const stream = await renderToReadableStream(AppComponent, {
+        bootstrapModules: ['/reactMain.js'],
+      });
+
 
       return stream;
     }
@@ -86,13 +96,6 @@ const serveDemoPage = async (req: Request) => {
 
     const { readable, writable } = new TransformStream({
       transform(chunk, controller) {
-        try {
-          console.log(new TextDecoder().decode(chunk));
-        } catch (e) {
-          writer.write(new TextEncoder().encode(`<pre style="color: red;">Error: ${e}</pre>`));
-          console.log('error', e);
-        }
-
         controller.enqueue(chunk);
       },
     });
@@ -112,6 +115,11 @@ const serveDemoPage = async (req: Request) => {
             document.getElementById(h.replace('ST', 'SR'))?.remove();
           }
         </script>
+        ${
+          Array.from(buildsMatchers.keys()).filter((build) => !excludeFromAutoMount.includes(build)).map((build) => {
+            return `<script type="module" src="${build}"></script>`
+          }).join('')
+        }
       </head>
       <body>
     `));
@@ -153,6 +161,8 @@ const serveDemoPage = async (req: Request) => {
           finish = true;
           doneReact = true;
 
+          writer.write(new TextEncoder().encode('</div>'));
+
           tryCloseStream();
           break;
         }
@@ -160,6 +170,8 @@ const serveDemoPage = async (req: Request) => {
         writer.write(value);
       }
     }
+
+    writer.write(new TextEncoder().encode('<div id="root">'));
 
     proxyReactStream();
 
@@ -174,7 +186,7 @@ const serveDemoPage = async (req: Request) => {
 const serveWebsocket = (req: Request, bunServer: Server) => {
   const { pathname } = new URL(req.url);
 
-  if (pathname === "/ws" && req.method === "GET") {
+  if (pathname === "/ws") {
     const success = bunServer.upgrade(req);
 
     if (!success) {
@@ -187,9 +199,15 @@ const serveWebsocket = (req: Request, bunServer: Server) => {
 
 init();
 
-export const server = Bun.serve<{ authToken: string }>({
+export const server = Bun.serve({
   port: 3000,
   async fetch(req, server) {
+    const websocketRequest = serveWebsocket(req, server);
+
+    if (websocketRequest) {
+      return websocketRequest;
+    }
+
     const buildFileRequest = serverBuildFile(req);
 
     if (buildFileRequest) {
@@ -202,16 +220,10 @@ export const server = Bun.serve<{ authToken: string }>({
       return faviconRequest;
     }
 
-    const demoPageRequest = await serveDemoPage(req);
+    const demoPageRequest = await serveDemoPage(req, server);
 
     if (demoPageRequest) {
       return demoPageRequest;
-    }
-
-    const websocketRequest = serveWebsocket(req, server);
-
-    if (websocketRequest) {
-      return websocketRequest;
     }
 
     return Response.json({ status: 404, message: "Not found" }, { status: 404 });
@@ -219,12 +231,14 @@ export const server = Bun.serve<{ authToken: string }>({
   websocket: {
     open(ws) {
       ws.ping();
+      ws.subscribe("bridge");
       console.log("A client connected!");
     },
     message(ws, message) {
       console.log(`Received ${message}`);
       ws.send(`You said: ${message}`);
     },
+
   },
 });
 
