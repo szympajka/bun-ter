@@ -246,12 +246,15 @@ export const server = Bun.serve({
     open(ws) {
       ws.ping();
       ws.subscribe("bridge");
-      console.log("A client connected!");
+
+      server.publish("bridge", "A client connected!");
     },
     message(ws, message) {
-      console.log(`Received ${message}`);
-      server.publish("bridge", message);
+      server.publish("bridge", "A client says: " + message);
     },
+    close(ws) {
+      server.publish("bridge", "A client disconnected!");
+    }
   },
 });
 

@@ -40,9 +40,7 @@ const Daa = () => {
     }
 
     const messageHandle = (event: MessageEvent) => {
-      console.log('Message from server ', event.data);
-
-      toast('Server push message', { description: event.data});
+      toast('WebSocket message received', { description: event.data});
     }
 
     socket.addEventListener('error', errorHandle);
