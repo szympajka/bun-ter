@@ -80,8 +80,8 @@ const serveDemoPage = async (req: Request, bunServer: Server) => {
       };
     };
 
-    const renderReact = async (request: Request) => {
-      const AppComponent = await AppServer();
+    const renderReact = async (req: Request, bunServer: Server) => {
+      const AppComponent = await AppServer(req, bunServer);
       const stream = await renderToReadableStream(AppComponent, {
         bootstrapModules: ['/reactMain.js'],
       });
@@ -90,7 +90,7 @@ const serveDemoPage = async (req: Request, bunServer: Server) => {
       return stream;
     }
 
-    const renderReactStream = await renderReact(req);
+    const renderReactStream = await renderReact(req, server);
 
     const [, copyRenderReactStream] = renderReactStream.tee();
 

@@ -1,3 +1,5 @@
+import { toast } from "../wrapToast";
+
 export const withSocket = () => {
   const socket = new WebSocket('ws://localhost:3000/ws');
 
@@ -11,5 +13,7 @@ export const withSocket = () => {
 
   socket.addEventListener('message', function (event) {
     console.log('Message from server ', event.data);
+
+    toast('Server push message', { description: event.data});
   });
 };
