@@ -3,7 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "serve": "bun --hot index.tsx"
+    "serve": "bun --hot index.tsx",
+    "start": "bun index.tsx",
+    "build:docker": "docker build -t bun-ter-image ."
   },
   "devDependencies": {
     "@types/react": "18.2.21",
