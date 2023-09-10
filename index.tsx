@@ -190,7 +190,7 @@ const serveWebsocket = (req: Request, bunServer: Server) => {
     const success = bunServer.upgrade(req);
 
     if (!success) {
-      return Response.json({ status: 400, message: "Bad request" }, { status: 400 });
+      return new Response(JSON.stringify({ status: 400, message: "Bad request" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
     return undefined;
@@ -201,7 +201,7 @@ const serveHealthCheck = (req: Request) => {
   const { pathname } = new URL(req.url);
 
   if (pathname === "/health") {
-    return Response.json({ status: 200, message: "OK" }, { status: 200 });
+    return new Response(JSON.stringify({ status: 200, message: "OK" }), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 }
 
@@ -240,7 +240,7 @@ export const server = Bun.serve({
       return demoPageRequest;
     }
 
-    return Response.json({ status: 404, message: "Not found" }, { status: 404 });
+    return new Response(JSON.stringify({ status: 404, message: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
   },
   websocket: {
     open(ws) {
@@ -250,9 +250,8 @@ export const server = Bun.serve({
     },
     message(ws, message) {
       console.log(`Received ${message}`);
-      ws.send(`You said: ${message}`);
+      server.publish("bridge", message);
     },
-
   },
 });
 
