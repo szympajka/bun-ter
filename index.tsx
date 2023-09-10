@@ -1,12 +1,14 @@
 import { renderToReadableStream } from 'react-dom/server';
 import { AppServer } from './main';
+import path from 'node:path';
 import { Server } from 'bun';
-import { write } from 'console';
+
+const tailwindOutput = Bun.file('./dist/output.css');
 
 const buildsMatchers = new Map<string, () => Response>();
 
 const excludeFromAutoMount = [
-  '/reactMain.js',
+  '/assets/reactMain.js',
 ];
 
 const init = async () => {
@@ -14,6 +16,7 @@ const init = async () => {
     entrypoints: ['./dynamicBuild/b.tsx', './dynamicBuild/reactMain.tsx'],
     target: "browser",
     splitting: true,
+    outdir: "./temp/build",
     minify: {
       identifiers: true,
       syntax: true,
@@ -22,9 +25,11 @@ const init = async () => {
   });
 
   for (const build of builds.outputs) {
-    buildsMatchers.set(build.path.substring(1), () => new Response(build.stream(), {
+    const relativePath = path.join('/assets', path.relative('./temp/build', build.path));
+
+    buildsMatchers.set(relativePath, () => new Response(build.stream(), {
       headers: {
-        "Content-Type": "text/javascript",
+        "Content-Type": build.type,
       },
     }));
   }
@@ -61,6 +66,16 @@ const serveFavicon = (req: Request) => {
 const serveDemoPage = async (req: Request, bunServer: Server) => {
   const { pathname } = new URL(req.url);
 
+  console.log(pathname);
+
+  if (pathname === "/assets/tailwind/output.css" && req.method === "GET") {
+    return new Response(tailwindOutput.stream(), {
+      headers: {
+        "Content-Type": tailwindOutput.type,
+      },
+    })
+  };
+
   if (pathname === "/demo" && req.method === "GET") {
     let doneReact = false;
     let doneLocal = false;
@@ -83,7 +98,7 @@ const serveDemoPage = async (req: Request, bunServer: Server) => {
     const renderReact = async (req: Request, bunServer: Server) => {
       const AppComponent = await AppServer(req, bunServer);
       const stream = await renderToReadableStream(AppComponent, {
-        bootstrapModules: ['/reactMain.js'],
+        bootstrapModules: ['/assets/reactMain.js'],
       });
 
 
@@ -109,6 +124,7 @@ const serveDemoPage = async (req: Request, bunServer: Server) => {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Document</title>
+        <link rel="stylesheet" href="/assets/tailwind/output.css">
         <script>
           function $U(h, s) {
             document.getElementById(h)?.remove();
@@ -117,7 +133,15 @@ const serveDemoPage = async (req: Request, bunServer: Server) => {
         </script>
         ${
           Array.from(buildsMatchers.keys()).filter((build) => !excludeFromAutoMount.includes(build)).map((build) => {
-            return `<script type="module" src="${build}"></script>`
+            if (build.endsWith('.js')) {
+              return `<script type="module" src="${build}"></script>`
+            }
+
+            if (build.endsWith('.css')) {
+              return `<link rel="stylesheet" href="${build}">`
+            }
+
+            return '';
           }).join('')
         }
       </head>

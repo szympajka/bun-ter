@@ -1,0 +1,11 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}

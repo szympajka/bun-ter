@@ -1,9 +1,12 @@
 /// <reference lib="dom" />
 
 import React, { Suspense, useEffect } from "react";
-import { Button } from "./dax";
 import { Toaster } from 'sonner'
 import { toast } from "./wrapToast";
+import { Input } from "./components/ui/input";
+import { Button } from './components/ui/button';
+
+import './app.styles.css';
 
 const Daa = () => {
   const socketRef = React.useRef<WebSocket>();
@@ -77,18 +80,19 @@ const Daa = () => {
   }
 
   return (
-    <div>
+    <div className="app-container">
       <Suspense fallback={<>Waitttt</>}>
         {/* @ts-ignore -- whatever */}
-        <Button2 onClick={() => toast('Clicked', { description: 'Lazy Button' })} />
+        <Button2 variant='secondary' onClick={() => toast('Clicked', { description: 'Lazy Button' })} >Lazy button</Button2>
       </Suspense>
 
       <hr />
-      <form noValidate onSubmit={onSubmit}>
-        <input type="text" name="message" />
-        <button type="submit">Submit</button>
+      <form noValidate onSubmit={onSubmit} className="form">
+        <Input type="text" name="message" placeholder="Say hello!"/>
+        <Button type="submit">Submit</Button>
       </form>
       <hr />
+      <h3 className="header">Dynamically streamed content:</h3>
     </div>
   );
 }
@@ -96,8 +100,8 @@ const Daa = () => {
 export const App = () => {
   return (
     <React.StrictMode>
-      <h1>Hello, world</h1>
-      <Button onClick={() => toast('Clicked', { description: 'Button' })} />
+      <h1 className="rootHeader">Hello, world</h1>
+      <Button onClick={() => toast('Clicked', { description: 'Button' })} >Button</Button>
       <Daa />
       <Toaster position="bottom-center" visibleToasts={3} closeButton duration={999999} />
     </React.StrictMode>
