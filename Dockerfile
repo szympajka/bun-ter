@@ -6,8 +6,12 @@ COPY *.json ./
 COPY bun.lockb ./
 COPY *.tsx ./
 COPY *.ts ./
-COPY dynamicBuild/*.ts ./dynamicBuild/
-COPY dynamicBuild/*.tsx ./dynamicBuild/
+COPY *.js ./
+COPY *.css ./
+COPY dynamicBuild/* ./dynamicBuild/
+COPY components/* ./components/
+COPY dist/* ./dist/
+COPY lib/* ./lib/
 
 RUN bun install
 
