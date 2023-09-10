@@ -61,7 +61,11 @@ const Daa = () => {
     const formData = new FormData(e.currentTarget);
 
     if (socketRef.current) {
-      socketRef.current.send(formData.get('message') as string);
+      const message = formData.get('message');
+
+      if (message) {
+        socketRef.current.send(encodeURIComponent(message.toString()));
+      }
     }
   }
 

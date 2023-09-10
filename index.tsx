@@ -250,7 +250,11 @@ export const server = Bun.serve({
       server.publish("bridge", "A client connected!");
     },
     message(ws, message) {
-      server.publish("bridge", "A client says: " + message);
+      if (typeof message === "string") {
+        server.publish("bridge", "A client says: " + decodeURIComponent(message));
+      } else {
+        server.publish("bridge", "A client says: " + decodeURIComponent(new TextDecoder().decode(message)));
+      }
     },
     close(ws) {
       server.publish("bridge", "A client disconnected!");
