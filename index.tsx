@@ -197,11 +197,25 @@ const serveWebsocket = (req: Request, bunServer: Server) => {
   }
 };
 
+const serveHealthCheck = (req: Request) => {
+  const { pathname } = new URL(req.url);
+
+  if (pathname === "/health") {
+    return Response.json({ status: 200, message: "OK" }, { status: 200 });
+  }
+}
+
 init();
 
 export const server = Bun.serve({
-  port: 3000,
+  port: process.env.PORT || 3000,
   async fetch(req, server) {
+    const healthCheckRequest = serveHealthCheck(req);
+
+    if (healthCheckRequest) {
+      return healthCheckRequest;
+    }
+
     const websocketRequest = serveWebsocket(req, server);
 
     if (websocketRequest) {
