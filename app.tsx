@@ -63,12 +63,16 @@ const Daa = () => {
 
     const formData = new FormData(e.currentTarget);
 
-    if (socketRef.current) {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       const message = formData.get('message');
 
       if (message) {
         socketRef.current.send(encodeURIComponent(message.toString()));
+        e.currentTarget.reset();
+        e.currentTarget.querySelector('input')?.focus();
       }
+    } else {
+      toast('WebSocket not connected, refresh.', { description: 'WebSocket' });
     }
   }
 
