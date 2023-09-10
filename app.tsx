@@ -31,7 +31,10 @@ const Daa = () => {
   }, []);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:3000/ws');
+    const { hostname, protocol, port } = window.location;
+    const url = new URL(`${protocol === 'https:' ? 'wss:' : 'ws:'}//${hostname}:${port}/ws`);
+
+    const socket = new WebSocket(url);
 
     socketRef.current = socket;
 
